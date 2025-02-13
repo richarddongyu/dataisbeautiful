@@ -1,0 +1,17 @@
+requests~=2.32.3
+pandas~=2.2.3
+bs4~=0.0.2
+beautifulsoup4~=4.13.3
+pycryptodomex~=3.21.0
+pypinyin~=0.53.0
+PyExecJS~=1.5.1
+numpy~=2.2.2
+demjson3~=3.0.6
+matplotlib~=3.10.0
+pillow~=11.1.0
+tqdm~=4.67.1
+fonttools~=4.56.0
+scikit-learn~=1.6.1
+lxml~=5.3.1
+urllib3~=1.26.20
+requests-html~=0.10.0
