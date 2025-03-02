@@ -1,10 +1,8 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2019/11/25 20:45
-contact: dtshare@126.com
-desc: 空气质量接口配置文件
+Date: 2019/11/25 20:45
+Desc: 空气质量接口配置文件
 """
 city_chinese_list = [
     "北京",

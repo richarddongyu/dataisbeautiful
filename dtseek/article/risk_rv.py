@@ -1,14 +1,11 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2019/11/12 14:51
-contact: dtshare@126.com
-desc: 修大成主页-Risk Lab-Realized Volatility; Oxford-Man Institute of Quantitative Finance Realized Library
+Date: 2024/1/20 20:51
+Desc: 修大成主页-Risk Lab-Realized Volatility; Oxford-Man Institute of Quantitative Finance Realized Library
 """
 import json
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import requests
 import urllib3
@@ -17,13 +14,13 @@ from bs4 import BeautifulSoup
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-def article_oman_rv(symbol="FTSE", index="rk_th2", plot=True):
+def article_oman_rv(symbol: str = "FTSE", index: str = "rk_th2") -> pd.DataFrame:
     """
-    获取 Oxford-Man Institute of Quantitative Finance Realized Library 的数据
+    Oxford-Man Institute of Quantitative Finance Realized Library 的数据
     :param symbol: str ['AEX', 'AORD', 'BFX', 'BSESN', 'BVLG', 'BVSP', 'DJI', 'FCHI', 'FTMIB', 'FTSE', 'GDAXI', 'GSPTSE', 'HSI', 'IBEX', 'IXIC', 'KS11', 'KSE', 'MXX', 'N225', 'NSEI', 'OMXC20', 'OMXHPI', 'OMXSPI', 'OSEAX', 'RUT', 'SMSI', 'SPX', 'SSEC', 'SSMI', 'STI', 'STOXX50E']
     :param index: str 指标 ['medrv', 'rk_twoscale', 'bv', 'rv10', 'rv5', 'rk_th2', 'rv10_ss', 'rsv', 'rv5_ss', 'bv_ss', 'rk_parzen', 'rsv_ss']
-    :param plot: Bool 是否画图
     :return: pandas.DataFrame
+
     The Oxford-Man Institute's "realised library" contains daily non-parametric measures of how volatility financial assets or indexes were in the past. Each day's volatility measure depends solely on financial data from that day. They are driven by the use of the latest innovations in econometric modelling and theory to design them, while we draw our high frequency data from the Thomson Reuters DataScope Tick History database. Realised measures are not volatility forecasts. However, some researchers use these measures as an input into forecasting models. The aim of this line of research is to make financial markets more transparent by exposing how volatility changes through time.
 
     This Library is used as the basis of some of our own research, which effects its scope, and is made available here to encourage the more widespread exploitation of these methods. It is given 'as is' and solely for informational purposes, please read the disclaimer.
@@ -67,7 +64,7 @@ def article_oman_rv(symbol="FTSE", index="rk_th2", plot=True):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "lxml")
     soup_text = soup.find("p").get_text()
-    data_json = json.loads(soup_text[soup_text.find("{") : soup_text.rfind("};") + 1])
+    data_json = json.loads(soup_text[soup_text.find("{"): soup_text.rfind("};") + 1])
     date_list = data_json[f".{symbol}"]["dates"]
     title_fore = data_json[f".{symbol}"][index]["name"]
     title_last = data_json[f".{symbol}"][index]["measure"]
@@ -77,22 +74,15 @@ def article_oman_rv(symbol="FTSE", index="rk_th2", plot=True):
     temp_df = temp_df.iloc[:, 1]
     temp_df.index.name = "date"
     temp_df.name = f"{symbol}-{index}"
-    if plot:
-        temp_df.plot()
-        plt.title(title_list)
-        plt.legend()
-        plt.show()
-        return temp_df
-    else:
-        return temp_df
+    return temp_df
 
 
-def article_oman_rv_short(symbol="FTSE", plot=True):
+def article_oman_rv_short(symbol: str = "FTSE") -> pd.DataFrame:
     """
-    获取 Oxford-Man Institute of Quantitative Finance Realized Library 的数据
+    Oxford-Man Institute of Quantitative Finance Realized Library 的数据
     :param symbol: str FTSE: FTSE 100, GDAXI: DAX, RUT: Russel 2000, SPX: S&P 500 Index, STOXX50E: EURO STOXX 50, SSEC: Shanghai Composite Index, N225: Nikkei 225
-    :param plot: Bool 是否画图
     :return: pandas.DataFrame
+
     The Oxford-Man Institute's "realised library" contains daily non-parametric measures of how volatility financial assets or indexes were in the past. Each day's volatility measure depends solely on financial data from that day. They are driven by the use of the latest innovations in econometric modelling and theory to design them, while we draw our high frequency data from the Thomson Reuters DataScope Tick History database. Realised measures are not volatility forecasts. However, some researchers use these measures as an input into forecasting models. The aim of this line of research is to make financial markets more transparent by exposing how volatility changes through time.
 
     This Library is used as the basis of some of our own research, which effects its scope, and is made available here to encourage the more widespread exploitation of these methods. It is given 'as is' and solely for informational purposes, please read the disclaimer.
@@ -114,10 +104,10 @@ def article_oman_rv_short(symbol="FTSE", plot=True):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36",
     }
 
-    res = requests.get(url, headers=headers)
+    res = requests.get(url, headers=headers, verify=False)
     soup = BeautifulSoup(res.text, "lxml")
     soup_text = soup.find("p").get_text()
-    data_json = json.loads(soup_text[soup_text.find("{") : soup_text.rfind("}") + 1])
+    data_json = json.loads(soup_text[soup_text.find("{"): soup_text.rfind("}") + 1])
     title_fore = data_json[f".{symbol}"]["name"]
     title_last = data_json[f".{symbol}"]["measure"]
     title_list = title_fore + "-" + title_last
@@ -126,21 +116,13 @@ def article_oman_rv_short(symbol="FTSE", plot=True):
     temp_df = temp_df.iloc[:, 1]
     temp_df.index.name = "date"
     temp_df.name = f"{symbol}"
-    if plot:
-        temp_df.plot()
-        plt.title(title_list)
-        plt.legend()
-        plt.show()
-        return temp_df
-    else:
-        return temp_df
+    return temp_df
 
 
-def article_rlab_rv(symbol="39693", plot=True):
+def article_rlab_rv(symbol: str = "39693") -> pd.DataFrame:
     """
-    获取修大成主页-Risk Lab-Realized Volatility
+    修大成主页-Risk Lab-Realized Volatility
     :param symbol: str 股票代码
-    :param plot: Bool 是否绘图
     :return: pandas.DataFrame
     1996-01-02    0.000000
     1996-01-04    0.000000
@@ -155,8 +137,7 @@ def article_rlab_rv(symbol="39693", plot=True):
     2019-11-08    0.199549
     Name: RV, Length: 5810, dtype: float64
 
-
-    Website:
+    Website
     https://dachxiu.chicagobooth.edu/
 
     Objective
@@ -174,7 +155,6 @@ def article_rlab_rv(symbol="39693", plot=True):
     3. “How Often to Sample A Continuous-time Process in the Presence of Market Microstructure Noise”, by Yacine Aït-Sahalia, Per Mykland, and Lan Zhang. Review of Financial Studies, 18 (2005), 351–416.
     4. “The Distribution of Exchange Rate Volatility”, by Torben Andersen, Tim Bollerslev, Francis X. Diebold, and Paul Labys. Journal of the American Statistical Association, 96 (2001), 42-55.
     5. “Econometric Analysis of Realized Volatility and Its Use in Estimating Stochastic Volatility Models”, by Ole E Barndorff‐Nielsen and Neil Shephard. Journal of the Royal Statistical Society: Series B, 64 (2002), 253-280.
-
     """
     print("由于服务器在国外, 请稍后, 如果访问失败, 请使用代理工具")
     url = "https://dachxiu.chicagobooth.edu/data.php"
@@ -202,25 +182,15 @@ def article_rlab_rv(symbol="39693", plot=True):
     data_se.name = "RV"
     temp_df = data_se.astype("float", errors="ignore")
     temp_df.index.name = "date"
-    if plot:
-        temp_df.plot()
-        plt.title("-".join(title_list))
-        plt.legend()
-        plt.show()
-        return temp_df
-    else:
-        return temp_df
+    return temp_df
 
 
 if __name__ == "__main__":
     article_rlab_rv_df = article_rlab_rv(symbol="39693")
     print(article_rlab_rv_df)
-    help(article_rlab_rv)
 
     article_oman_rv_short_df = article_oman_rv_short(symbol="FTSE")
     print(article_oman_rv_short_df)
-    help(article_rlab_rv)
 
     article_oman_rv_df = article_oman_rv(symbol="FTSE", index="rk_th2")
     print(article_oman_rv_df)
-    help(article_rlab_rv)

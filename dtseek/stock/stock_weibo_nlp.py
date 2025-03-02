@@ -1,10 +1,8 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2020/2/25 17:00
-contact: dtshare@126.com
-desc: 金十数据中心-实时监控-微博舆情报告
+Date: 2022/3/5 17:00
+Desc: 金十数据中心-实时监控-微博舆情报告
 https://datacenter.jin10.com/market
 报告内容：时间期限可选择2小时、6小时、12小时、1天、1周、1月。
 该表格展示的是在对应的时间期限内，个股在微博讨论中的人气排行指数。
@@ -47,7 +45,7 @@ def stock_js_weibo_nlp_time() -> Dict:
     return r.json()["data"]["timescale"]
 
 
-def stock_js_weibo_report(time_period: str = "CNHOUR2") -> pd.DataFrame:
+def stock_js_weibo_report(time_period: str = "CNHOUR12") -> pd.DataFrame:
     """
     金十数据中心-实时监控-微博舆情报告
     https://datacenter.jin10.com/market
@@ -78,11 +76,15 @@ def stock_js_weibo_report(time_period: str = "CNHOUR2") -> pd.DataFrame:
         'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8'
     }
 
-    r = requests.get(url, headers=headers, data=payload)
-    return pd.DataFrame(r.json()["data"])
+    r = requests.get(url, params=payload, headers=headers)
+    temp_df = pd.DataFrame(r.json()["data"])
+    temp_df['rate'] = pd.to_numeric(temp_df['rate'])
+    return temp_df
 
 
 if __name__ == '__main__':
-    print(stock_js_weibo_nlp_time())
-    get_news_df = stock_js_weibo_report(time_period="CNHOUR12")
+    stock_js_weibo_nlp_time_map = stock_js_weibo_nlp_time()
+    print(stock_js_weibo_nlp_time_map)
+
+    get_news_df = stock_js_weibo_report(time_period="CNHOUR6")
     print(get_news_df)

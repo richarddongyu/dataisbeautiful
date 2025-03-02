@@ -1,179 +1,278 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-Data:2019/10/6 14:34
-contact: dtshare@126.com
-desc: 获取申万指数-申万一级
-http://www.swsindex.com/IdxMain.aspx
-部分代码要感谢: PKUJson
+Date: 2024/1/24 15:00
+Desc: 申万宏源研究-申万指数-指数发布
+乐咕乐股网
+https://legulegu.com/stockdata/index-composition?industryCode=851921.SI
 """
-import time
-import json
-import datetime
+
+from io import StringIO
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from dtseek.index.cons import sw_headers, sw_payload, sw_url, sw_cons_headers
+from dtseek.utils.cons import headers
 
 
-def sw_index_spot():
-    result = []
-    for i in range(1, 3):
-        payload = sw_payload.copy()
-        payload.update({"p": i})
-        payload.update({"timed": int(time.time() * 1000)})
-        req = requests.post(sw_url, headers=sw_headers, data=payload)
-        data = req.content.decode()
-        data = data.replace("'", '"')
-        data = json.loads(data)
-        result.extend(data["root"])
-    result = pd.DataFrame(result)
-    result["L2"] = result["L2"].str.strip()
-    result.columns = ["指数代码", "指数名称", "昨收盘", "今开盘", "成交额", "最高价", "最低价", "最新价", "成交量"]
-    return result
+def sw_index_first_info() -> pd.DataFrame:
+    """
+    乐咕乐股-申万一级-分类
+    https://legulegu.com/stockdata/sw-industry-overview#level1
+    :return: 分类
+    :rtype: pandas.DataFrame
+    """
+    url = "https://legulegu.com/stockdata/sw-industry-overview"
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, features="lxml")
+    code_raw = soup.find(name="div", attrs={"id": "level1Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-chinese-title"}
+    )
+    name_raw = soup.find(name="div", attrs={"id": "level1Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-number"}
+    )
+    value_raw = soup.find(name="div", attrs={"id": "level1Items"}).find_all(
+        name="div", attrs={"class": "lg-sw-industries-item-value"}
+    )
+    code = [item.get_text() for item in code_raw]
+    name = [item.get_text().split("(")[0] for item in name_raw]
+    num = [item.get_text().split("(")[1].split(")")[0] for item in name_raw]
+    num_1 = [
+        item.find_all("span", attrs={"class": "value"})[0].get_text().strip()
+        for item in value_raw
+    ]
+    num_2 = [
+        item.find_all("span", attrs={"class": "value"})[1].get_text().strip()
+        for item in value_raw
+    ]
+    num_3 = [
+        item.find_all("span", attrs={"class": "value"})[2].get_text().strip()
+        for item in value_raw
+    ]
+    num_4 = [
+        item.find_all("span", attrs={"class": "value"})[3].get_text().strip()
+        for item in value_raw
+    ]
+    temp_df = pd.DataFrame([code, name, num, num_1, num_2, num_3, num_4]).T
+    temp_df.columns = [
+        "行业代码",
+        "行业名称",
+        "成份个数",
+        "静态市盈率",
+        "TTM(滚动)市盈率",
+        "市净率",
+        "静态股息率",
+    ]
+    temp_df["成份个数"] = pd.to_numeric(temp_df["成份个数"], errors="coerce")
+    temp_df["静态市盈率"] = pd.to_numeric(temp_df["静态市盈率"], errors="coerce")
+    temp_df["TTM(滚动)市盈率"] = pd.to_numeric(
+        temp_df["TTM(滚动)市盈率"], errors="coerce"
+    )
+    temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+    temp_df["静态股息率"] = pd.to_numeric(temp_df["静态股息率"], errors="coerce")
+    return temp_df
 
 
-def sw_index_cons(index_code="801010"):
-    url = f'http://www.swsindex.com/downfile.aspx?code={index_code}'
-    res = requests.get(url)
-    if res is not None:
-        soup = BeautifulSoup(res.text, "html5lib")
-        data = []
-        table = soup.findAll('table')[0]
-        rows = table.findAll('tr')
-        for row in rows:
-            cols = row.findAll('td')
-            if len(cols) >= 4:
-                stock_code = cols[0].text
-                stock_name = cols[1].text
-                weight = cols[2].text
-                start_date = cols[3].text
-
-                data.append({
-                    'stock_code': stock_code,
-                    'stock_name': stock_name,
-                    'start_date': start_date,
-                    'weight': weight
-                })
-        df = pd.DataFrame(data)
-        if len(df) > 0:
-            df['start_date'] = df['start_date'].apply(lambda x: datetime.datetime.strptime(x, '%Y/%m/%d %H:%M:%S'))
-        return df
-    return '获取数据失败'
-
-
-def sw_index_daily(index_code="801010", start_date="2019-12-01", end_date="2019-12-07"):
-    url = 'http://www.swsindex.com/excel2.aspx?ctable=swindexhistory&where=%s '
-    where_cond = " swindexcode in ('%s') and BargainDate >= '%s' and BargainDate <= '%s'" % (
-        index_code, start_date, end_date)
-    url = url % where_cond
-    # print(url)
-
-    response = requests.get(url).text
-    if response is None:
-        return None, '获取数据失败'
-
-    soup = BeautifulSoup(response, "html5lib")
-    data = []
-    table = soup.findAll('table')[0]
-    rows = table.findAll('tr')
-    for row in rows:
-        cols = row.findAll('td')
-        if len(cols) >= 10:
-            index_code = cols[0].text
-            index_name = cols[1].text
-            date = cols[2].text
-            open_ = cols[3].text
-            high = cols[4].text
-            low = cols[5].text
-            close = cols[6].text
-            vol = cols[7].text
-            amount = cols[8].text
-            change_pct = cols[9].text
-
-            data.append({
-                'index_code': index_code.replace(",", ""),
-                'index_name': index_name.replace(",", ""),
-                'date': date.replace(",", ""),
-                'open': open_.replace(",", ""),
-                'high': high.replace(",", ""),
-                'low': low.replace(",", ""),
-                'close': close.replace(",", ""),
-                'vol': vol.replace(",", ""),
-                'amount': amount.replace(",", ""),
-                'change_pct': change_pct.replace(",", ""),
-            })
-
-    df = pd.DataFrame(data)
-    if len(df) > 0:
-        df['date'] = df['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y/%m/%d %H:%M:%S'))
-    return df
+def sw_index_second_info() -> pd.DataFrame:
+    """
+    乐咕乐股-申万二级-分类
+    https://legulegu.com/stockdata/sw-industry-overview#level1
+    :return: 分类
+    :rtype: pandas.DataFrame
+    """
+    url = "https://legulegu.com/stockdata/sw-industry-overview"
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, features="lxml")
+    code_raw = soup.find(name="div", attrs={"id": "level2Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-chinese-title"}
+    )
+    name_raw = soup.find(name="div", attrs={"id": "level2Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-number"}
+    )
+    value_raw = soup.find(name="div", attrs={"id": "level2Items"}).find_all(
+        name="div", attrs={"class": "lg-sw-industries-item-value"}
+    )
+    code = [item.get_text() for item in code_raw]
+    name = [item.get_text().split("(")[0] for item in name_raw]
+    parent_name = [
+        item.find("span").get_text().split("(")[0][1:-1] for item in name_raw
+    ]
+    num = [item.get_text().split("(")[1].split(")")[0] for item in name_raw]
+    num_1 = [
+        item.find_all("span", attrs={"class": "value"})[0].get_text().strip()
+        for item in value_raw
+    ]
+    num_2 = [
+        item.find_all("span", attrs={"class": "value"})[1].get_text().strip()
+        for item in value_raw
+    ]
+    num_3 = [
+        item.find_all("span", attrs={"class": "value"})[2].get_text().strip()
+        for item in value_raw
+    ]
+    num_4 = [
+        item.find_all("span", attrs={"class": "value"})[3].get_text().strip()
+        for item in value_raw
+    ]
+    temp_df = pd.DataFrame([code, name, parent_name, num, num_1, num_2, num_3, num_4]).T
+    temp_df.columns = [
+        "行业代码",
+        "行业名称",
+        "上级行业",
+        "成份个数",
+        "静态市盈率",
+        "TTM(滚动)市盈率",
+        "市净率",
+        "静态股息率",
+    ]
+    temp_df["成份个数"] = pd.to_numeric(temp_df["成份个数"], errors="coerce")
+    temp_df["静态市盈率"] = pd.to_numeric(temp_df["静态市盈率"], errors="coerce")
+    temp_df["TTM(滚动)市盈率"] = pd.to_numeric(
+        temp_df["TTM(滚动)市盈率"], errors="coerce"
+    )
+    temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+    temp_df["静态股息率"] = pd.to_numeric(temp_df["静态股息率"], errors="coerce")
+    return temp_df
 
 
-def sw_index_daily_indicator(index_code="801010", start_date="2019-12-01", end_date="2019-12-07", data_type="Day"):
-    url = 'http://www.swsindex.com/excel.aspx?ctable=V_Report&where=%s'
-    where_cond = "swindexcode in ('%s') and BargainDate >= '%s' and BargainDate <= '%s' and type='%s'" % (
-        index_code, start_date, end_date, data_type)
-    url = url % where_cond
+def sw_index_third_info() -> pd.DataFrame:
+    """
+    乐咕乐股-申万三级-分类
+    https://legulegu.com/stockdata/sw-industry-overview#level1
+    :return: 分类
+    :rtype: pandas.DataFrame
+    """
+    url = "https://legulegu.com/stockdata/sw-industry-overview"
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, features="lxml")
+    code_raw = soup.find(name="div", attrs={"id": "level3Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-chinese-title"}
+    )
+    name_raw = soup.find(name="div", attrs={"id": "level3Items"}).find_all(
+        name="div", attrs={"class": "lg-industries-item-number"}
+    )
+    value_raw = soup.find(name="div", attrs={"id": "level3Items"}).find_all(
+        name="div", attrs={"class": "lg-sw-industries-item-value"}
+    )
+    code = [item.get_text() for item in code_raw]
+    name = [item.get_text().split("(")[0] for item in name_raw]
+    parent_name = [
+        item.find("span").get_text().split("(")[0][1:-1] for item in name_raw
+    ]
+    num = [item.get_text().split("(")[1].split(")")[0] for item in name_raw]
+    num_1 = [
+        item.find_all("span", attrs={"class": "value"})[0].get_text().strip()
+        for item in value_raw
+    ]
+    num_2 = [
+        item.find_all("span", attrs={"class": "value"})[1].get_text().strip()
+        for item in value_raw
+    ]
+    num_3 = [
+        item.find_all("span", attrs={"class": "value"})[2].get_text().strip()
+        for item in value_raw
+    ]
+    num_4 = [
+        item.find_all("span", attrs={"class": "value"})[3].get_text().strip()
+        for item in value_raw
+    ]
+    temp_df = pd.DataFrame([code, name, parent_name, num, num_1, num_2, num_3, num_4]).T
+    temp_df.columns = [
+        "行业代码",
+        "行业名称",
+        "上级行业",
+        "成份个数",
+        "静态市盈率",
+        "TTM(滚动)市盈率",
+        "市净率",
+        "静态股息率",
+    ]
+    temp_df["成份个数"] = pd.to_numeric(temp_df["成份个数"], errors="coerce")
+    temp_df["静态市盈率"] = pd.to_numeric(temp_df["静态市盈率"], errors="coerce")
+    temp_df["TTM(滚动)市盈率"] = pd.to_numeric(
+        temp_df["TTM(滚动)市盈率"], errors="coerce"
+    )
+    temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+    temp_df["静态股息率"] = pd.to_numeric(temp_df["静态股息率"], errors="coerce")
+    return temp_df
 
-    response = requests.get(url).text
-    if response is None:
-        return None, '获取数据失败'
 
-    soup = BeautifulSoup(response, "html5lib")
-    data = []
-    table = soup.findAll('table')[0]
-    rows = table.findAll('tr')
-    for row in rows:
-        cols = row.findAll('td')
-        if len(cols) >= 14:
-            index_code = cols[0].text
-            index_name = cols[1].text
-            date = cols[2].text
-            close = cols[3].text
-            volume = cols[4].text
-            chg_pct = cols[5].text
-            turn_rate = cols[6].text
-            pe = cols[7].text
-            pb = cols[8].text
-            v_wap = cols[9].text
-            turnover_pct = cols[10].text
-            float_mv = cols[11].text
-            avg_float_mv = cols[12].text
-            dividend_yield_ratio = cols[13].text
+def sw_index_third_cons(symbol: str = "801120.SI") -> pd.DataFrame:
+    """
+    乐咕乐股-申万三级-行业成份
+    https://legulegu.com/stockdata/index-composition?industryCode=801120.SI
+    :param symbol: 三级行业的行业代码
+    :type symbol: str
+    :return: 行业成份
+    :rtype: pandas.DataFrame
+    """
+    url = f"https://legulegu.com/stockdata/index-composition?industryCode={symbol}"
+    r = requests.get(url, headers=headers)
+    temp_df = pd.read_html(StringIO(r.text))[0]
+    temp_df.columns = [
+        "序号",
+        "股票代码",
+        "股票简称",
+        "纳入时间",
+        "申万1级",
+        "申万2级",
+        "申万3级",
+        "价格",
+        "市盈率",
+        "市盈率ttm",
+        "市净率",
+        "股息率",
+        "市值",
+        "归母净利润同比增长(09-30)",
+        "归母净利润同比增长(06-30)",
+        "营业收入同比增长(09-30)",
+        "营业收入同比增长(06-30)",
+    ]
+    temp_df["价格"] = pd.to_numeric(temp_df["价格"], errors="coerce")
+    temp_df["市盈率"] = pd.to_numeric(temp_df["市盈率"], errors="coerce")
+    temp_df["市盈率ttm"] = pd.to_numeric(temp_df["市盈率ttm"], errors="coerce")
+    temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+    temp_df["股息率"] = pd.to_numeric(temp_df["股息率"].str.strip("%"), errors="coerce")
+    temp_df["市值"] = pd.to_numeric(temp_df["市值"], errors="coerce")
 
-            data.append({
-                'index_code': index_code,
-                'index_name': index_name,
-                'date': date,
-                'close': close,
-                'volume': volume,
-                'chg_pct': chg_pct,
-                'turn_rate': turn_rate,
-                'pe': pe,
-                'pb': pb,
-                'vwap': v_wap,
-                'float_mv': float_mv,
-                'avg_float_mv': avg_float_mv,
-                'dividend_yield_ratio': dividend_yield_ratio,
-                'turnover_pct': turnover_pct
-            })
+    temp_df["归母净利润同比增长(09-30)"] = temp_df[
+        "归母净利润同比增长(09-30)"
+    ].str.strip("%")
+    temp_df["归母净利润同比增长(06-30)"] = temp_df[
+        "归母净利润同比增长(06-30)"
+    ].str.strip("%")
+    temp_df["营业收入同比增长(09-30)"] = temp_df["营业收入同比增长(09-30)"].str.strip(
+        "%"
+    )
+    temp_df["营业收入同比增长(06-30)"] = temp_df["营业收入同比增长(06-30)"].str.strip(
+        "%"
+    )
 
-    df = pd.DataFrame(data)
-    if len(df) > 0:
-        df['date'] = df['date'].apply(lambda x: datetime.datetime.strptime(x, '%Y/%m/%d %H:%M:%S'))
-    return df
+    temp_df["归母净利润同比增长(09-30)"] = pd.to_numeric(
+        temp_df["归母净利润同比增长(09-30)"], errors="coerce"
+    )
+    temp_df["归母净利润同比增长(06-30)"] = pd.to_numeric(
+        temp_df["归母净利润同比增长(06-30)"], errors="coerce"
+    )
+    temp_df["营业收入同比增长(09-30)"] = pd.to_numeric(
+        temp_df["营业收入同比增长(09-30)"], errors="coerce"
+    )
+    temp_df["营业收入同比增长(06-30)"] = pd.to_numeric(
+        temp_df["营业收入同比增长(06-30)"], errors="coerce"
+    )
+    return temp_df
 
 
 if __name__ == "__main__":
-    sw_index_df = sw_index_spot()
-    print(sw_index_df)
-    sw_index_df = sw_index_cons(index_code="801010")
-    print(sw_index_df)
-    sw_index_df = sw_index_daily(index_code="801010", start_date="2019-12-01", end_date="2019-12-07")
-    print(sw_index_df)
-    sw_index_df = sw_index_daily_indicator(index_code="801010", start_date="2019-11-01", end_date="2019-12-07", data_type="Week")
-    print(sw_index_df)
+    sw_index_first_info_df = sw_index_first_info()
+    print(sw_index_first_info_df)
+
+    sw_index_second_info_df = sw_index_second_info()
+    print(sw_index_second_info_df)
+
+    sw_index_third_info_df = sw_index_third_info()
+    print(sw_index_third_info_df)
+
+    sw_index_third_cons_df = sw_index_third_cons(symbol="850111.SI")
+    print(sw_index_third_cons_df)

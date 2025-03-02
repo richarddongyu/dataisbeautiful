@@ -1,36 +1,45 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-Data:2019/10/21 15:22
-contact: dtshare@126.com
-desc: 
+Date: 2023/8/14 11:10
+Desc: 国家金融与发展实验室-中国宏观杠杆率数据
+http://114.115.232.154:8080/
 """
+
 import pandas as pd
-import matplotlib.pyplot as plt
-
-plt.rcParams["font.sans-serif"] = ["SimHei"]  # 显示中文标签
 
 
-def macro_cnbs():
+def macro_cnbs() -> pd.DataFrame:
     """
-        年份       居民部门     非金融企业部门  ...      实体经济部门    金融部门资产方    金融部门负债方
-    0   1993-12   8.311222   91.658000  ...  107.791459   8.896441   7.128428
-    1   1994-12   7.808230   82.411703  ...   98.354271   9.808787   6.796868
-    2   1995-12   8.240004   80.950106  ...   97.850373  10.009081   7.006151
-    3   1996-03   8.403456   81.711651  ...   99.241521  10.183896   7.186300
-    4   1996-06   8.581114   82.051373  ...   99.679459  10.379730   7.380510
-    ..      ...        ...         ...  ...         ...        ...        ...
-    93  2018-09  52.575456  155.641011  ...  245.227043  61.350917  60.645733
-    94  2018-12  53.198837  153.553140  ...  243.702122  60.638348  60.936158
-    95  2019-03  54.277928  156.881879  ...  248.828108  60.542178  59.417322
-    96  2019-06  55.304291  155.743313  ...  249.533412  58.736094  58.727086
-    97  2019-09  56.314848  155.618498  ...  251.147265  55.820243  59.358625
+    国家金融与发展实验室-中国宏观杠杆率数据
+    http://114.115.232.154:8080/
+    :return: 中国宏观杠杆率数据
+    :rtype: pandas.DataFrame
     """
     url = "http://114.115.232.154:8080/handler/download.ashx"
-    excel_data = pd.read_excel(url, sheet_name="Data", header=0, skiprows=1)
-    excel_data["Period"] = pd.to_datetime(excel_data["Period"]).dt.strftime("%Y-%m")
-    excel_data.columns = [
+    temp_df = pd.read_excel(
+        url, sheet_name="Data", header=0, skiprows=1, engine="openpyxl"
+    )
+
+    temp_df["Period"] = pd.to_datetime(temp_df["Period"]).dt.strftime("%Y-%m")
+    temp_df.dropna(axis=1, inplace=True)
+
+    temp_df.rename(
+        columns={
+            "Period": "年份",
+            "Household": "居民部门",
+            "Non-financial corporations": "非金融企业部门",
+            "Central government ": "中央政府",
+            "Local government": "地方政府",
+            "General government": "政府部门",
+            "Non financial sector": "实体经济部门",
+            "Financial sector(asset side)": "金融部门资产方",
+            "Financial sector(liability side)": "金融部门负债方",
+        },
+        inplace=True,
+    )
+
+    column_order = [
         "年份",
         "居民部门",
         "非金融企业部门",
@@ -41,16 +50,24 @@ def macro_cnbs():
         "金融部门资产方",
         "金融部门负债方",
     ]
-    return excel_data
-    # data_info = pd.read_excel(url, sheet_name="Contents", header=0, skiprows=4)
-    # data_info.iloc[:, 2]
+    temp_df = temp_df.reindex(columns=column_order)
+    temp_df["居民部门"] = pd.to_numeric(temp_df["居民部门"], errors="coerce")
+    temp_df["非金融企业部门"] = pd.to_numeric(
+        temp_df["非金融企业部门"], errors="coerce"
+    )
+    temp_df["政府部门"] = pd.to_numeric(temp_df["政府部门"], errors="coerce")
+    temp_df["中央政府"] = pd.to_numeric(temp_df["中央政府"], errors="coerce")
+    temp_df["地方政府"] = pd.to_numeric(temp_df["地方政府"], errors="coerce")
+    temp_df["实体经济部门"] = pd.to_numeric(temp_df["实体经济部门"], errors="coerce")
+    temp_df["金融部门资产方"] = pd.to_numeric(
+        temp_df["金融部门资产方"], errors="coerce"
+    )
+    temp_df["金融部门负债方"] = pd.to_numeric(
+        temp_df["金融部门负债方"], errors="coerce"
+    )
+    return temp_df
 
 
-if __name__ == '__main__':
-    cnbs_df = macro_cnbs()
-    print(cnbs_df)
-    cnbs_df.index = pd.to_datetime(cnbs_df["年份"])
-    cnbs_df["居民部门"].plot()
-    plt.ylabel("居民部门杠杆率数据(百分比%)")
-    plt.title("中国宏观杠杆率数据-居民部门")
-    plt.show()
+if __name__ == "__main__":
+    macro_cnbs_df = macro_cnbs()
+    print(macro_cnbs_df)

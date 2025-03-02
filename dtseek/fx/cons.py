@@ -1,10 +1,8 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2019/10/20 10:58
-contact: dtshare@126.com
-desc: 外汇配置文件
+Date: 2019/10/20 10:58
+Desc: 外汇配置文件
 """
 # headers
 SHORT_HEADERS = {

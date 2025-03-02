@@ -1,11 +1,10 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2019/9/30 13:58
-contact: dtshare@126.com
-desc:
+Date: 2024/11/28 22:00
+Desc: 期货品种映射表
 """
+
 import re
 
 from dtseek.futures import cons
@@ -23,7 +22,7 @@ def symbol_varieties(contract_code: str):
     return symbol_detail
 
 
-def symbol_market(symbol_detail: str):
+def symbol_market(symbol_detail: str = "SC"):
     """
     映射出市场代码
     :param symbol_detail:
@@ -142,6 +141,31 @@ def chinese_to_english(chinese_var: str):
         "红枣",
         "不锈钢仓库",
         "纯碱",
+        "液化石油气",
+        "低硫燃料油",
+        "纸浆仓库",
+        "石油沥青厂库",
+        "石油沥青仓库",
+        "螺纹钢仓库",
+        "螺纹钢厂库",
+        "纸浆厂库",
+        "低硫燃料油仓库",
+        "低硫燃料油厂库",
+        "短纤",
+        "涤纶短纤",
+        "生猪",
+        "花生",
+        "工业硅",
+        "氧化铝",
+        "丁二烯橡胶",
+        "碳酸锂",
+        "氧化铝仓库",
+        "氧化铝厂库",
+        "烧碱",
+        "丁二烯橡胶仓库",
+        "丁二烯橡胶厂库",
+        "PX",
+        "原木",
     ]
     english_list = [
         "RU",
@@ -233,6 +257,31 @@ def chinese_to_english(chinese_var: str):
         "CJ",
         "SS",
         "SA",
+        "PG",
+        "LU",
+        "SP",
+        "BU",
+        "BU",
+        "RB",
+        "RB",
+        "SP",
+        "LU",
+        "LU",
+        "PF",
+        "PF",
+        "LH",
+        "PK",
+        "SI",
+        "AO",
+        "BR",
+        "LC",
+        "AO",
+        "AO",
+        "SH",
+        "BR",
+        "BR",
+        "PX",
+        "LG",
     ]
     pos = chinese_list.index(chinese_var)
     return english_list[pos]
@@ -241,9 +290,12 @@ def chinese_to_english(chinese_var: str):
 if __name__ == "__main__":
     print(chinese_to_english("苹果"))
     symbol = "rb1801"
+
     var = symbol_varieties("rb1808")
     print(var)
+
     market = symbol_market("SP")
     print(market)
+
     chi = find_chinese("a对方水电费dc大V")
     print(chi)

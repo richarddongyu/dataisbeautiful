@@ -1,16 +1,14 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# /usr/bin/env python
 """
-Author: Tong Du
-date: 2020/2/13 21:22
-Email: dtshare@126.com
-desc: 存储和读取Token文件
+Date: 2020/2/13 21:22
+Desc: 存储和读取 Token 文件
 """
 import os
 
 import pandas as pd
 
-from dtshare.pro import cons
+from dtseek.pro import cons
 
 
 def set_token(token):
@@ -28,7 +26,7 @@ def get_token():
         return str(df.iloc[0]['token'])
     else:
         print(cons.TOKEN_ERR_MSG)
-        return None
+        return
 
 
 if __name__ == '__main__':
